@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple Crud API
+
+Globals:
+  Function:
+    Timeout: 5
+    Handler: app.lambdaHandler
+    Runtime: nodejs10.x
+    Environment:
+      Variables:
+        RECORDS_TABLE: !Ref RecordsTable
+    Layers:
+      - arn:aws:lambda:us-west-2:700336187521:layer:aws-sdk:9
+  Api:
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+
+Resources:
+  SiteApi:                                                                ## NOT REQUIRED FOR BASIC
+    Type: AWS::Serverless::Api 
+    Properties: 
+      StageName: Prod
+      EndpointConfiguration: REGIONAL
+      TracingEnabled: true
+        
+  GetFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: get/
+      Policies:
+        - DynamoDBReadPolicy: {TableName: !Ref RecordsTable}
+      Events:
+        GetService:
+          Type: Api
+          Properties:
+            RestApiId: !Ref SiteApi
+            Path: /
+            Method: get
+
+  PostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: post/
+      Policies:
+        - DynamoDBCrudPolicy: {TableName: !Ref RecordsTable}
+      Events:
+        GetService:
+          Type: Api
+          Properties:
+            RestApiId: !Ref SiteApi
+            Path: /
+            Method: post
+
+  RecordsTable:
+      Type: AWS::Serverless::SimpleTable
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${SiteApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
